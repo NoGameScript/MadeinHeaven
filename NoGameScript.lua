@@ -1,6 +1,7 @@
 -- SERVICES
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
@@ -12,7 +13,7 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 220, 0, 100)
+frame.Size = UDim2.new(0, 220, 0, 130) -- Increased height for extra button
 frame.Position = UDim2.new(0, 50, 0, 50)
 frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 frame.BorderSizePixel = 2
@@ -20,7 +21,7 @@ frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
 frame.Active = true
 frame.Draggable = true
 
--- TITLE LABEL
+-- TITLE
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0.3, 0)
 title.Position = UDim2.new(0, 0, 0, 0)
@@ -31,7 +32,7 @@ title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextScaled = true
 title.TextYAlignment = Enum.TextYAlignment.Center
 
--- SUBTITLE LABEL
+-- SUBTITLE
 local sub = Instance.new("TextLabel", frame)
 sub.Size = UDim2.new(1, -20, 0.2, 0)
 sub.Position = UDim2.new(0, 10, 0.3, 0)
@@ -40,32 +41,30 @@ sub.Text = "Script by NoGrindScripts"
 sub.Font = Enum.Font.Garamond
 sub.TextColor3 = Color3.fromRGB(255, 255, 255)
 sub.TextScaled = true
-sub.TextTransparency = 0.7
+sub.TextTransparency = 0.75
 sub.TextYAlignment = Enum.TextYAlignment.Center
 
 -- AUTO CLAIM BUTTON
-local button = Instance.new("TextButton", frame)
-button.Size = UDim2.new(0.8, 0, 0.3, 0)
-button.Position = UDim2.new(0.1, 0, 0.6, 0)
-button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-button.TextColor3 = Color3.fromRGB(255, 255, 255)
-button.Font = Enum.Font.GothamBold
-button.TextScaled = true
-button.Text = "Rejoin Private Server"
-button.BorderSizePixel = 0
+local claimBtn = Instance.new("TextButton", frame)
+claimBtn.Size = UDim2.new(0.8, 0, 0.2, 0)
+claimBtn.Position = UDim2.new(0.1, 0, 0.58, 0)
+claimBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+claimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+claimBtn.Font = Enum.Font.GothamBold
+claimBtn.TextScaled = true
+claimBtn.Text = "Start Claim"
+claimBtn.BorderSizePixel = 0
 
--- BUTTON FUNCTION
-button.MouseButton1Click:Connect(function()
-	local privateServerId = game.PrivateServerId
-	local jobId = game.JobId
-	local placeId = game.PlaceId
-
-	if privateServerId ~= "" then
-		TeleportService:TeleportToPrivateServer(placeId, privateServerId, {player}, jobId)
-	else
-		warn("Not in a private server, rejoin failed.")
-	end
-end)
+-- SERVER HOP BUTTON
+local hopBtn = Instance.new("TextButton", frame)
+hopBtn.Size = UDim2.new(0.8, 0, 0.2, 0)
+hopBtn.Position = UDim2.new(0.1, 0, 0.8, 0)
+hopBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+hopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+hopBtn.Font = Enum.Font.GothamBold
+hopBtn.TextScaled = true
+hopBtn.Text = "Server Hop"
+hopBtn.BorderSizePixel = 0
 
 -- AUTO CLAIM FUNCTION
 local function autoClaim()
@@ -104,5 +103,28 @@ local function autoClaim()
 	end
 end
 
--- START AUTOMATICALLY
-task.spawn(autoClaim)
+-- SERVER HOP FUNCTION
+local function serverHop()
+	local servers = {}
+	local success, result = pcall(function()
+		return HttpService:JSONDecode(game:HttpGet(
+			"https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+	end)
+
+	if success and result and result.data then
+		for _, server in ipairs(result.data) do
+			if server.playing < server.maxPlayers and server.id ~= game.JobId then
+				table.insert(servers, server.id)
+			end
+		end
+
+		if #servers > 0 then
+			local newServer = servers[math.random(1, #servers)]
+			TeleportService:TeleportToPlaceInstance(game.PlaceId, newServer, player)
+		end
+	end
+end
+
+-- BUTTON EVENTS
+claimBtn.MouseButton1Click:Connect(autoClaim)
+hopBtn.MouseButton1Click:Connect(serverHop)
